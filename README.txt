@@ -1,11 +1,6 @@
 # NET-Opt: Network Efficiency & Topology Optimizer
 ### v16 Strategic Planner | Steiner Tree Approximation Engine
 
-![Python](https://img.shields.io/badge/Python-3.11%2B-00E5FF?style=for-the-badge&logo=python&logoColor=white)
-![Framework](https://img.shields.io/badge/Streamlit-Enterprise-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
-![Status](https://img.shields.io/badge/Status-Active_Development-00E5FF?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-00E5FF?style=for-the-badge)
-
 ---
 
 ## 📉 Executive Overview
@@ -82,3 +77,4 @@ streamlit run neuromorphic_topology_solver_final_v16.py
 Distributed under the MIT License. Engineered for educational and strategic planning purposes.
 
 Engineered by Adam Kistler 
+
