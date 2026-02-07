@@ -11,46 +11,71 @@ import json
 
 # --- 1. CONFIGURATION & STYLE ---
 st.set_page_config(
-    page_title="Neuromorphic Topology Engine V3", 
+    page_title="Neuromorphic Topology Engine V4", 
     layout="wide", 
     page_icon="💠",
     initial_sidebar_state="expanded"
 )
 
-# Cyberpunk/Security Analyst Theme
+# Deep Stealth / Cyber-Security CSS
 st.markdown("""
 <style>
-    /* Global Reset */
-    .stApp { background-color: #020406; color: #C0C0C0; }
+    /* 1. MAIN BACKGROUND & TEXT */
+    .stApp { background-color: #050505; color: #a0a0a0; }
     
-    /* Compact Metrics */
-    div[data-testid="stMetric"] {
-        background-color: #0a1014;
-        border: 1px solid #1e2a36;
-        padding: 5px 10px;
-        border-radius: 2px;
-        border-left: 2px solid #00E5FF;
+    /* 2. ELIMINATE ALL WHITE BOXES (Dropdowns, Inputs) */
+    div[data-baseweb="select"] > div, 
+    div[data-baseweb="base-input"], 
+    input.st-ai, 
+    textarea.st-ai {
+        background-color: #0a1014 !important;
+        border: 1px solid #333 !important;
+        color: #00E5FF !important;
     }
-    label[data-testid="stMetricLabel"] { font-size: 12px; }
-    div[data-testid="stMetricValue"] { font-size: 18px; color: #00E5FF; }
-
-    /* Headers */
-    h1, h2, h3 { color: #00E5FF !important; font-family: 'Courier New', monospace; letter-spacing: -1px; text-transform: uppercase;}
+    div[data-baseweb="select"] > div:hover { border-color: #00E5FF !important; }
     
-    /* Buttons & Inputs */
-    .stTextArea textarea { background-color: #0a1014; color: #00E5FF; border: 1px solid #333; }
-    .stButton>button {
-        color: #00E5FF;
-        border: 1px solid #00E5FF;
-        background: rgba(0, 229, 255, 0.05);
+    /* Dropdown Options (The pop-up list) */
+    ul[data-baseweb="menu"] { background-color: #0a1014 !important; border: 1px solid #333; }
+    li[data-baseweb="option"] { color: #00E5FF !important; }
+    
+    /* 3. BUTTONS (Standard & Download) - STEALTH DEFAULT */
+    .stButton>button, .stDownloadButton>button {
+        color: #00E5FF !important;
+        border: 1px solid #1e3a4a !important;
+        background-color: #080c10 !important; /* DARK DEFAULT */
         font-family: 'Courier New', monospace;
         font-size: 12px;
+        transition: all 0.2s ease-in-out;
     }
-    .stButton>button:hover {
-        background: #00E5FF;
-        color: #000;
-        box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+    /* HOVER STATE */
+    .stButton>button:hover, .stDownloadButton>button:hover {
+        border-color: #00E5FF !important;
+        background-color: rgba(0, 229, 255, 0.1) !important;
+        box-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
+        color: #FFFFFF !important;
     }
+
+    /* 4. METRICS & ALERTS */
+    div[data-testid="stMetric"] {
+        background-color: #080808;
+        border: 1px solid #222;
+        padding: 5px;
+        border-left: 3px solid #00E5FF;
+    }
+    label[data-testid="stMetricLabel"] { color: #666; font-size: 11px; }
+    div[data-testid="stMetricValue"] { font-size: 20px; color: #00E5FF; text-shadow: 0 0 5px rgba(0,229,255,0.5); }
+    
+    /* 5. HEADERS & TEXT */
+    h1, h2, h3 { color: #00E5FF !important; font-family: 'Courier New', monospace; letter-spacing: 2px; text-transform: uppercase; }
+    p, li { font-family: 'Consolas', monospace; font-size: 14px; color: #888; }
+    
+    /* 6. SIDEBAR */
+    section[data-testid="stSidebar"] { background-color: #020202; border-right: 1px solid #111; }
+    
+    /* 7. RADIO BUTTONS */
+    div[role="radiogroup"] label { color: #888 !important; }
+    div[role="radiogroup"] label:hover { color: #00E5FF !important; }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -68,10 +93,12 @@ class PhysarumEngine:
         self.height = height
         self.num_agents = num_agents
         
-        # Agents: [x, y, angle] initialized in a "Big Bang" center cluster
+        # Initialization: Ring Formation (More visually interesting than random)
         self.agents = np.zeros((num_agents, 3))
-        self.agents[:, 0] = np.random.uniform(width*0.45, width*0.55, num_agents)
-        self.agents[:, 1] = np.random.uniform(height*0.45, height*0.55, num_agents)
+        thetas = np.random.uniform(0, 2*np.pi, num_agents)
+        r = np.random.uniform(0, 10, num_agents) # Start at center
+        self.agents[:, 0] = width/2 + r * np.cos(thetas)
+        self.agents[:, 1] = height/2 + r * np.sin(thetas)
         self.agents[:, 2] = np.random.uniform(0, 2*np.pi, num_agents)
         
         self.trail_map = np.zeros((height, width))
@@ -80,10 +107,9 @@ class PhysarumEngine:
     def step(self, sensor_angle, sensor_dist, turn_speed, speed, decay, nodes):
         self.steps += 1
         
-        # 1. Sensing (Vectorized Geodesic Search)
+        # 1. Sensing
         angles = self.agents[:, 2]
         
-        # Helper to wrap coordinates (Toroidal topology)
         def get_pos(a):
             x = (self.agents[:, 0] + np.cos(a) * sensor_dist) % self.width
             y = (self.agents[:, 1] + np.sin(a) * sensor_dist) % self.height
@@ -97,8 +123,8 @@ class PhysarumEngine:
         c_val = self.trail_map[cy, cx]
         r_val = self.trail_map[ry, rx]
         
-        # 2. Steering Logic (Flux Maximization)
-        jitter = np.random.uniform(-0.1, 0.1, self.num_agents)
+        # 2. Steering
+        jitter = np.random.uniform(-0.15, 0.15, self.num_agents)
         
         move_fwd = (c_val > l_val) & (c_val > r_val)
         move_left = (l_val > c_val) & (l_val > r_val)
@@ -108,26 +134,27 @@ class PhysarumEngine:
         new_angles[move_left] -= turn_speed
         new_angles[move_right] += turn_speed
         mask_random = ~(move_fwd | move_left | move_right)
-        new_angles[mask_random] += jitter[mask_random] * 5 
+        new_angles[mask_random] += jitter[mask_random] * 4
         
         self.agents[:, 2] = new_angles
 
-        # 3. Movement & Deposition
+        # 3. Movement
         self.agents[:, 0] += np.cos(self.agents[:, 2]) * speed
         self.agents[:, 1] += np.sin(self.agents[:, 2]) * speed
         self.agents[:, 0] %= self.width
         self.agents[:, 1] %= self.height
         
+        # 4. Deposit
         ix, iy = self.agents[:, 0].astype(int), self.agents[:, 1].astype(int)
         np.add.at(self.trail_map, (iy, ix), 1.0) 
         
-        # 4. Node Gravity (Attractors)
+        # 5. Node Gravity
         for sx, sy in nodes:
             y_min, y_max = max(0, int(sy)-3), min(self.height, int(sy)+3)
             x_min, x_max = max(0, int(sx)-3), min(self.width, int(sx)+3)
-            self.trail_map[y_min:y_max, x_min:x_max] += 2.0
+            self.trail_map[y_min:y_max, x_min:x_max] += 2.5
 
-        # 5. Decay (Entropy)
+        # 6. Decay
         self.trail_map = gaussian_filter(self.trail_map, sigma=0.6) * decay
 
 # --- 3. SESSION MANAGEMENT ---
@@ -141,40 +168,31 @@ if 'history' not in st.session_state:
 
 # --- 4. SIDEBAR CONTROLS ---
 
-st.sidebar.markdown("## 💠 SYSTEM KERNEL")
-is_running = st.sidebar.toggle("RUN SIMULATION", value=True)
+st.sidebar.markdown("### 💠 KERNEL ACCESS")
+is_running = st.sidebar.toggle("System Active", value=True)
 
-with st.sidebar.expander("🗺️ Topology Editor", expanded=True):
-    preset = st.selectbox("Preset Patterns:", ["Random Scatter", "Pentagon Ring", "Grid Lattice", "Star Hub"])
+st.sidebar.markdown("---")
+st.sidebar.markdown("#### 🗺️ Topology Config")
+preset = st.sidebar.selectbox("Load Protocol:", ["Random Scatter", "Pentagon Ring", "Grid Lattice", "Star Hub"])
     
-    if st.button("RESET / APPLY PRESET"):
-        st.session_state.sim = None
-        st.session_state.history = []
-        if preset == "Random Scatter":
-            st.session_state.nodes = np.random.randint(20, 280, size=(np.random.randint(5, 9), 2)).tolist()
-        elif preset == "Pentagon Ring":
-            c, r = (150, 150), 100
-            angles = np.linspace(0, 2*np.pi, 6)[:-1]
-            st.session_state.nodes = [[c[0] + r*np.cos(a), c[1] + r*np.sin(a)] for a in angles]
-        elif preset == "Grid Lattice":
-            st.session_state.nodes = [[x, y] for x in range(80, 280, 70) for y in range(80, 280, 70)]
-        elif preset == "Star Hub":
-            nodes = [[150, 150]]
-            nodes.extend([[150 + 120*np.cos(a), 150 + 120*np.sin(a)] for a in np.linspace(0, 2*np.pi, 7)[:-1]])
-            st.session_state.nodes = nodes
-        st.rerun()
+if st.sidebar.button("INITIALIZE PROTOCOL"):
+    st.session_state.sim = None
+    st.session_state.history = []
+    if preset == "Random Scatter":
+        st.session_state.nodes = np.random.randint(20, 280, size=(np.random.randint(5, 9), 2)).tolist()
+    elif preset == "Pentagon Ring":
+        c, r = (150, 150), 100
+        angles = np.linspace(0, 2*np.pi, 6)[:-1]
+        st.session_state.nodes = [[c[0] + r*np.cos(a), c[1] + r*np.sin(a)] for a in angles]
+    elif preset == "Grid Lattice":
+        st.session_state.nodes = [[x, y] for x in range(80, 280, 70) for y in range(80, 280, 70)]
+    elif preset == "Star Hub":
+        nodes = [[150, 150]]
+        nodes.extend([[150 + 120*np.cos(a), 150 + 120*np.sin(a)] for a in np.linspace(0, 2*np.pi, 7)[:-1]])
+        st.session_state.nodes = nodes
+    st.rerun()
 
-    # Manual Override
-    manual_input = st.text_area("Inject Coordinates (JSON)", value="", placeholder="[[100,100], [200,200]]")
-    if st.button("INJECT COORDINATES"):
-        try:
-            coords = json.loads(manual_input)
-            st.session_state.nodes = coords
-            st.session_state.sim = None
-            st.rerun()
-        except:
-            st.error("Invalid JSON format.")
-
+st.sidebar.markdown("---")
 with st.sidebar.expander("⚙️ Physics Parameters"):
     agent_count = st.slider("Particle Flux", 1000, 10000, 5000)
     decay_rate = st.slider("Entropy Decay", 0.90, 0.99, 0.95)
@@ -211,47 +229,48 @@ m2.metric("EPOCH", f"{engine.steps}")
 m3.metric("MST BASELINE", f"{int(mst_cost)}")
 m4.metric("BIO-COST", f"{int(bio_cost)}", delta=f"{int(mst_cost - bio_cost)}")
 
-# Main Visuals (Split 2:1)
-col_vis, col_stats = st.columns([2, 1])
+st.markdown("---")
+
+# Main Visuals (Split 1.5 : 1 for a smaller map)
+col_vis, col_stats = st.columns([1.5, 1])
 
 with col_vis:
-    st.markdown("### 👁️ GEODESIC FLOW MAP")
-    
-    # Plotting
-    fig, ax = plt.subplots(figsize=(6, 6), facecolor='#020406')
+    # Plotting - SMALLER FIGURE SIZE (4x4 inches)
+    fig, ax = plt.subplots(figsize=(4, 4), facecolor='#050505')
     
     # Data Normalization for visuals
     disp_map = np.log1p(engine.trail_map)
     
-    # "Cyber" Color Scheme
+    # "Cyber" Color Scheme - Winter/Cool
     ax.imshow(disp_map, cmap='winter', origin='upper', aspect='equal')
     
     # Nodes
     if len(nodes_arr) > 0:
-        ax.scatter(nodes_arr[:, 0], nodes_arr[:, 1], c='#00E5FF', s=100, edgecolors='white', linewidth=1.5, zorder=10)
+        ax.scatter(nodes_arr[:, 0], nodes_arr[:, 1], c='#00E5FF', s=80, edgecolors='white', linewidth=1.0, zorder=10)
     
     ax.axis('off')
+    # Tight layout to remove whitespace
+    fig.tight_layout(pad=0)
     st.pyplot(fig, use_container_width=True)
 
 with col_stats:
-    st.markdown("### 📈 CONVERGENCE TELEMETRY")
+    st.markdown("###### 📉 CONVERGENCE TELEMETRY")
     
     # Live Line Chart
     chart_data = pd.DataFrame(st.session_state.history)
-    st.line_chart(chart_data, color=["#FFFFFF", "#00E5FF"], height=200)
+    st.line_chart(chart_data, color=["#444444", "#00E5FF"], height=180)
     
-    st.info("""
-    **SYSTEM STATUS:**
-    * **Algorithm:** Physarum Polycephalum (Slime Mold)
-    * **Objective:** Steiner Tree Approximation
-    * **Latency:** < 12ms
-    """)
+    st.markdown("###### 💾 DATA EXPORT")
     
-    # Download
-    if st.button("💾 EXPORT TOPOLOGY DATA"):
-        df = pd.DataFrame(st.session_state.nodes, columns=["X", "Y"])
-        csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button("Download CSV", csv, "topology.csv", "text/csv")
+    # Button 1: CSV
+    df = pd.DataFrame(st.session_state.nodes, columns=["X", "Y"])
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.download_button("DOWNLOAD NODE TELEMETRY", csv, "topology.csv", "text/csv", use_container_width=True)
+    
+    # Button 2: Image
+    img_buf = io.BytesIO()
+    fig.savefig(img_buf, format='png', facecolor='#050505', bbox_inches='tight', pad_inches=0)
+    st.download_button("CAPTURE VISUAL STATE", img_buf.getvalue(), "network_state.png", "image/png", use_container_width=True)
 
 # AUTO-LOOP
 if is_running:
