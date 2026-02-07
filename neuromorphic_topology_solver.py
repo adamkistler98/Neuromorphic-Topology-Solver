@@ -12,7 +12,7 @@ plt.style.use('dark_background')
 
 # --- 2. STEALTH CONFIGURATION ---
 st.set_page_config(
-    page_title="Neuromorphic Architect v14", 
+    page_title="Neuromorphic Architect v15", 
     layout="wide", 
     page_icon="🕸️",
     initial_sidebar_state="expanded"
@@ -81,7 +81,6 @@ class BioEngine:
         r_val = self.trail_map[ry, rx]
         
         # DECISION (With Noise Injection)
-        # Higher noise = Terrain Difficulty (Agents make more random errors)
         jitter = np.random.uniform(-noise_level, noise_level, self.num_agents)
         
         move_fwd = (c_val > l_val) & (c_val > r_val)
@@ -115,8 +114,8 @@ class BioEngine:
         self.trail_map = gaussian_filter(self.trail_map, sigma=0.6) * decay
 
 # --- 5. STATE MANAGEMENT ---
-if 'engine_v14' not in st.session_state:
-    st.session_state.engine_v14 = None
+if 'engine_v15' not in st.session_state:
+    st.session_state.engine_v15 = None
 if 'nodes' not in st.session_state:
     st.session_state.nodes = [[150, 50], [250, 150], [150, 250], [50, 150]]
 if 'history' not in st.session_state:
@@ -126,10 +125,11 @@ if 'history' not in st.session_state:
 st.sidebar.markdown("### 🎛️ CONTROL PLANE")
 is_running = st.sidebar.toggle("🟢 SYSTEM ONLINE", value=True)
 
+# 1. SCENARIO
 st.sidebar.markdown("#### 1. SCENARIO CONFIG")
 preset = st.sidebar.selectbox("Region Topology", ["Diamond (Regional)", "Pentagon Ring", "Grid (Urban)", "Hub-Spoke (Enterprise)"])
 if st.sidebar.button("⚠️ LOAD TOPOLOGY"):
-    st.session_state.engine_v14 = None
+    st.session_state.engine_v15 = None
     st.session_state.history = []
     if preset == "Diamond (Regional)":
         st.session_state.nodes = [[150, 50], [250, 150], [150, 250], [50, 150]]
@@ -146,34 +146,34 @@ if st.sidebar.button("⚠️ LOAD TOPOLOGY"):
     st.rerun()
 
 st.sidebar.markdown("---")
+
+# 2. BUSINESS
 st.sidebar.markdown("#### 2. BUSINESS LOGIC")
-
-# 1. CAPEX (Decay)
-capex_pref = st.sidebar.slider("CAPEX Limit (Decay)", 0.0, 1.0, 0.8, help="High = Strict Budget (Minimal Cabling). Low = Unlimited Budget (Mesh).")
+capex_pref = st.sidebar.slider("CAPEX Limit (Decay)", 0.0, 1.0, 0.8, help="Budget Constraint. High = Minimal Cabling. Low = Mesh Network.")
 decay = 0.90 + (0.09 * (1.0 - capex_pref))
+redundancy_pref = st.sidebar.slider("Failover Risk (Angle)", 0.1, 1.5, 0.7, help="Risk Tolerance. High = Build Backup Loops. Low = Single Point of Failure OK.")
+traffic_load = st.sidebar.slider("Projected Load (Agents)", 1000, 10000, 5000, help="Simulated Network Congestion.")
 
-# 2. REDUNDANCY (Sensor Angle)
-redundancy_pref = st.sidebar.slider("Failover Risk (Angle)", 0.1, 1.5, 0.7, help="High = Ensure Backup Paths. Low = Single Point of Failure OK.")
+st.sidebar.markdown("---")
 
-# 3. LATENCY (Speed) - NEW
-latency_pref = st.sidebar.slider("Latency Priority (Speed)", 1.0, 5.0, 2.0, help="High = HFT/Real-time (Direct lines). Low = Batch/Storage (Winding lines).")
+# 3. PHYSICS
+st.sidebar.markdown("#### 3. PHYSICS IMPACT")
+latency_pref = st.sidebar.slider("Transmission Speed (C)", 1.0, 5.0, 2.0, help="Simulates Signal Propagation Speed. High = HFT/Direct Lines. Low = Standard Fiber.")
 
-# 4. TERRAIN (Noise) - NEW
-terrain_diff = st.sidebar.slider("Terrain Difficulty (Noise)", 0.05, 0.5, 0.1, help="Simulates urban density or physical obstacles. High values create erratic, robust paths.")
-
-# 5. LOAD (Agents)
-traffic_load = st.sidebar.slider("Projected Load (Agents)", 1000, 10000, 5000)
+# 4. ENVIRONMENT
+st.sidebar.markdown("#### 4. ENVIRONMENTAL FACTORS")
+terrain_diff = st.sidebar.slider("Signal Interference (Noise)", 0.05, 0.5, 0.1, help="Simulates physical obstacles/EM interference. High values cause erratic routing.")
 
 # --- 7. INITIALIZE ---
-if st.session_state.engine_v14 is None or st.session_state.engine_v14.num_agents != traffic_load:
-    st.session_state.engine_v14 = BioEngine(300, 300, traffic_load)
+if st.session_state.engine_v15 is None or st.session_state.engine_v15.num_agents != traffic_load:
+    st.session_state.engine_v15 = BioEngine(300, 300, traffic_load)
 
-engine = st.session_state.engine_v14
+engine = st.session_state.engine_v15
 nodes_arr = np.array(st.session_state.nodes)
 
 if is_running:
     for _ in range(12): 
-        # Pass new variables to step function
+        # Pass all 4 variable sets
         engine.step(st.session_state.nodes, latency_pref, decay, redundancy_pref, terrain_diff)
 
 # --- 8. METRICS & ANALYSIS ---
@@ -189,11 +189,11 @@ capex_efficiency = min(100, (mst_cost / (cable_volume + 1)) * 100)
 c1, c2 = st.columns([3, 1])
 with c1:
     st.markdown("### 🕸️ NEUROMORPHIC ARCHITECT")
-    st.caption(f"OPTIMIZATION TARGET: STEINER TREE APPROXIMATION | MODE: v14 DEEP-OPS")
+    st.caption(f"OPTIMIZATION TARGET: STEINER TREE APPROXIMATION | MODE: v15 FULL-SPECTRUM")
 
 # DYNAMIC ANALYST REPORT
 report_color = "#00FF41" if capex_efficiency > 50 else "#FFA500"
-latency_status = "ULTRA-LOW" if latency_pref > 3.0 else "STANDARD"
+latency_status = "ULTRA-LOW (HFT)" if latency_pref > 3.0 else "STANDARD"
 terrain_status = "HOSTILE" if terrain_diff > 0.3 else "STABLE"
 
 st.markdown(f"""
@@ -211,7 +211,7 @@ m1, m2, m3, m4, m5 = st.columns(5)
 m1.metric("DATA CENTERS", f"{len(nodes_arr)}")
 m2.metric("MINIMUM VIABLE (MST)", f"{int(mst_cost)} km")
 m3.metric("PROPOSED FIBER", f"{int(cable_volume)} km", delta=f"{int(cable_volume - mst_cost)} redundant", delta_color="inverse")
-m4.metric("LATENCY SCORE", f"{latency_pref}x")
+m4.metric("PHYSICS C", f"{latency_pref}x")
 m5.metric("CAPEX SAVINGS", f"{int(capex_efficiency)}%", "vs. Mesh")
 
 # --- 10. VISUALIZATION TRIFECTA ---
