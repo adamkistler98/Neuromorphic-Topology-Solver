@@ -12,9 +12,9 @@ plt.style.use('dark_background')
 
 # --- 2. STEALTH CONFIGURATION ---
 st.set_page_config(
-    page_title="Neuromorphic Architect v15", 
+    page_title="NetOpt v16", 
     layout="wide", 
-    page_icon="🕸️",
+    page_icon="📉",
     initial_sidebar_state="expanded"
 )
 
@@ -48,7 +48,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. BIO-ENGINE (UPDATED PHYSICS KERNEL) ---
+# --- 4. BIO-ENGINE (PHYSICS KERNEL) ---
 class BioEngine:
     def __init__(self, width, height, num_agents):
         self.width = width
@@ -87,7 +87,6 @@ class BioEngine:
         move_left = (l_val > c_val) & (l_val > r_val)
         move_right = (r_val > c_val) & (r_val > l_val)
         
-        # Turn speed is inversely proportional to speed (High speed = wide turns)
         turn_rate = 0.5 / speed 
         
         self.agents[move_left, 2] -= turn_rate
@@ -114,8 +113,8 @@ class BioEngine:
         self.trail_map = gaussian_filter(self.trail_map, sigma=0.6) * decay
 
 # --- 5. STATE MANAGEMENT ---
-if 'engine_v15' not in st.session_state:
-    st.session_state.engine_v15 = None
+if 'engine_v16' not in st.session_state:
+    st.session_state.engine_v16 = None
 if 'nodes' not in st.session_state:
     st.session_state.nodes = [[150, 50], [250, 150], [150, 250], [50, 150]]
 if 'history' not in st.session_state:
@@ -129,7 +128,7 @@ is_running = st.sidebar.toggle("🟢 SYSTEM ONLINE", value=True)
 st.sidebar.markdown("#### 1. SCENARIO CONFIG")
 preset = st.sidebar.selectbox("Region Topology", ["Diamond (Regional)", "Pentagon Ring", "Grid (Urban)", "Hub-Spoke (Enterprise)"])
 if st.sidebar.button("⚠️ LOAD TOPOLOGY"):
-    st.session_state.engine_v15 = None
+    st.session_state.engine_v16 = None
     st.session_state.history = []
     if preset == "Diamond (Regional)":
         st.session_state.nodes = [[150, 50], [250, 150], [150, 250], [50, 150]]
@@ -165,10 +164,10 @@ st.sidebar.markdown("#### 4. ENVIRONMENTAL FACTORS")
 terrain_diff = st.sidebar.slider("Signal Interference (Noise)", 0.05, 0.5, 0.1, help="Simulates physical obstacles/EM interference. High values cause erratic routing.")
 
 # --- 7. INITIALIZE ---
-if st.session_state.engine_v15 is None or st.session_state.engine_v15.num_agents != traffic_load:
-    st.session_state.engine_v15 = BioEngine(300, 300, traffic_load)
+if st.session_state.engine_v16 is None or st.session_state.engine_v16.num_agents != traffic_load:
+    st.session_state.engine_v16 = BioEngine(300, 300, traffic_load)
 
-engine = st.session_state.engine_v15
+engine = st.session_state.engine_v16
 nodes_arr = np.array(st.session_state.nodes)
 
 if is_running:
@@ -188,8 +187,8 @@ capex_efficiency = min(100, (mst_cost / (cable_volume + 1)) * 100)
 # --- 9. DASHBOARD UI ---
 c1, c2 = st.columns([3, 1])
 with c1:
-    st.markdown("### 🕸️ NEUROMORPHIC ARCHITECT")
-    st.caption(f"OPTIMIZATION TARGET: STEINER TREE APPROXIMATION | MODE: v15 FULL-SPECTRUM")
+    st.markdown("### 🕸️ NETWORK EFFICIENCY & TOPOLOGY OPTIMIZER")
+    st.caption(f"OPTIMIZATION TARGET: STEINER TREE APPROXIMATION | MODE: v16 STRATEGIC PLANNER")
 
 # DYNAMIC ANALYST REPORT
 report_color = "#00FF41" if capex_efficiency > 50 else "#FFA500"
