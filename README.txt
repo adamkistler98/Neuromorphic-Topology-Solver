@@ -1,50 +1,84 @@
-# Neuromorphic Topology Solver (NTS)
-### Bio-Mimetic Network Optimization Engine
+# NET-Opt: Network Efficiency & Topology Optimizer
+### v16 Strategic Planner | Steiner Tree Approximation Engine
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
-![Framework](https://img.shields.io/badge/Streamlit-1.28%2B-red)
-![Scientific Stack](https://img.shields.io/badge/SciPy%20%7C%20NumPy-Optimized-green)
+![Python](https://img.shields.io/badge/Python-3.11%2B-00E5FF?style=for-the-badge&logo=python&logoColor=white)
+![Framework](https://img.shields.io/badge/Streamlit-Enterprise-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
+![Status](https://img.shields.io/badge/Status-Active_Development-00E5FF?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-00E5FF?style=for-the-badge)
 
-## 📡 Overview
-The **Neuromorphic Topology Solver** is a Bio-Mimetic simulation engine designed to solve **Steiner Tree** optimization problems for distributed network infrastructures. 
+---
 
-By replicating the biological intelligence of *Physarum polycephalum* (Slime Mold), this tool autonomously discovers the most efficient routing paths between server nodes. It utilizes a **Vectorized Agent Model** to simulate thousands of independent "packets" that exhibit emergent behavior, naturally converging on a network topology that balances minimal latency with maximum redundancy.
+## 📉 Executive Overview
 
-## 🛠️ Key Capabilities
-* **Autonomous Routing:** Agents utilize chemotaxis-based heuristics to discover data centers without pre-programmed paths.
-* **Vectorized Physics Engine:** Built on NumPy to handle 5,000+ concurrent agents with real-time frame rates.
-* **Dynamic Optimization:** Users can adjust "Decay Rates" (Pruning Pressure) and "Sensor Angles" to simulate different network conditions (Mesh vs. Backbone).
-* **Enterprise Reporting:** Includes built-in tools to snapshot high-resolution topology maps and export node telemetry as CSV data.
+**NET-Opt** is a high-performance simulation engine designed to solve complex network topology problems where traditional algorithms fail. It does not just find the "shortest path" (Dijkstra); it finds the **Optimal Infrastructure Balance**—the "Sweet Spot" between **Capital Expenditure (CAPEX)**, **Redundancy**, and **Latency**.
 
-## 🧠 The Algorithm (Bio-Computing)
-This solver rejects standard Dijkstra or A* algorithms in favor of a stochastic, self-healing approach:
-1.  **Exploration:** Agents move stochastically through the void, depositing a digital pheromone trail.
-2.  **Sensation:** Agents scan a 3-point wide-angle horizon. If they detect a trail or a node, they steer toward it.
-3.  **Reinforcement:** Successful paths are traversed more frequently, increasing their signal strength (Bandwidth).
-4.  **Decay:** The environment applies a Gaussian decay filter. Inefficient or redundant paths "evaporate," leaving only the optimal trunk lines.
+By utilizing a **physarum-based transport solver**, NET-Opt autonomously generates **Steiner Tree approximations**. It visualizes how a network should be constructed to survive physical terrain constraints and signal interference while minimizing fiber-optic cabling costs.
 
-## 🚀 Installation & Usage
+> **Business Use Case:** A telecom architect needs to connect 5 regional data centers.
+> * **Full Mesh?** Too expensive (High CAPEX).
+> * **Single Line?** Too risky (Zero Redundancy).
+> * **NET-Opt Solution:** Automatically generates a minimum-cost backbone with just enough loops to guarantee failover.
+
+---
+
+## 🛠️ Strategic Capabilities
+
+### 1. Multi-Variable Optimization
+NET-Opt solves for four competing constraints simultaneously:
+* **CAPEX (Budget):** High decay rates prune inefficient paths, simulating strict fiber budgets.
+* **Redundancy (Risk):** Wide sensor angles force the creation of "backup loops" for high-availability requirements.
+* **Physics (Speed of Light):** Simulates signal propagation speed to prioritize low-latency (straight) routes for HFT scenarios.
+* **Environment (Interference):** Injects "Terrain Noise" to simulate physical obstacles or EM interference, forcing robust routing.
+
+### 2. The "Stealth" Command Console
+A unified, zero-scroll dashboard designed for decision-makers:
+* **Real-Time Telemetry:** Live comparison of "Optimal Baseline" (MST) vs. "Actual Proposed Cost."
+* **Analyst Report:** Automated logic that grades your topology (e.g., *"Deployment Approved"* vs. *"Review Budget"*).
+* **Dual-View Architect:**
+    * **Left Screen:** *Latency Terrain* (Heatmap of bandwidth congestion).
+    * **Right Screen:** *Blueprints* (Vectorized cable routes separating Backbone vs. Failover).
+
+### 3. Enterprise Export
+* **CSV Telemetry:** Export node coordinates and cost metrics for external GIS tools.
+* **Snapshotting:** High-resolution capture of the finalized topology state.
+
+---
+
+## 🧠 The Engine: How It Works
+
+NET-Opt rejects static pathfinding in favor of a **Stochastic Agent-Based Model (ABM)**:
+
+| Business Logic | Simulation Variable | Biological Equivalent |
+| :--- | :--- | :--- |
+| **Budget / CAPEX** | **Decay Rate** | Path Evaporation |
+| **Risk Tolerance** | **Sensor Angle** | Field of View |
+| **Latency Priority** | **Agent Speed** | Metabolic Rate |
+| **Terrain Difficulty** | **Noise Injection** | Random Jitter |
+
+1.  **Exploration:** Thousands of "packet agents" flood the map, searching for data centers.
+2.  **Reinforcement:** When a path connects two nodes effectively, it is reinforced (bandwidth increases).
+3.  **Optimization:** The "Decay" factor continuously dissolves weak, unused paths, leaving behind only the most efficient trunk lines.
+
+---
+
+## 🚀 Installation & Deployment
 
 **1. Clone the Repository**
 ```bash
-git clone [https://github.com/your-username/neuromorphic-topology-solver.git](https://github.com/your-username/neuromorphic-topology-solver.git)
-cd neuromorphic-topology-solver
+git clone [https://github.com/your-username/net-opt.git](https://github.com/your-username/net-opt.git)
+cd net-opt
 
-├── neuromorphic_topology_solver.py  # Main Application Core
-├── requirements.txt                 # Dependency Manifest
-├── README.md                        # Documentation
-└── /assets                          # Screenshots and Architecture Diagrams
+pip install -r requirements.txt
 
-📊 Telemetry & Export
-The application provides a "Net-Ops Console" allowing for:
+streamlit run neuromorphic_topology_solver_final_v16.py
 
-Live Metrics: Tracking active cabling cost (km) and optimization epochs.
-
-Snapshotting: High-res PNG downloads of the current convergence state.
-
-Data Export: CSV serialization of node coordinates and efficiency metrics for external analysis.
+📦 NET-Opt
+ ┣ 📜 neuromorphic_topology_solver_final_v16.py  # The Core Engine
+ ┣ 📜 requirements.txt                           # Dependencies (numpy, scipy, matplotlib, streamlit)
+ ┣ 📜 README.md                                  # Documentation
+ ┗ 📂 /snapshots                                 # Exported topology maps
 
 📜 License
-Distributed under the MIT License. See LICENSE for more information.
+Distributed under the MIT License. Engineered for educational and strategic planning purposes.
 
-Engineered by Adam Kistler | Cybersecurity & Platform Administration
+Engineered by Adam Kistler 
