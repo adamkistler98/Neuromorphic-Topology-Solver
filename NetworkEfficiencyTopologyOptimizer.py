@@ -13,7 +13,7 @@ plt.style.use('dark_background')
 
 # --- 2. STEALTH CONFIGURATION ---
 st.set_page_config(
-    page_title="NetOpt v34: Clean Console", 
+    page_title="NetOpt v35: Prime Architect", 
     layout="wide", 
     page_icon="💠",
     initial_sidebar_state="expanded"
@@ -280,8 +280,8 @@ class CommandAgent:
         return msg
 
 # --- 6. STATE MANAGEMENT ---
-if 'engine_v34' not in st.session_state:
-    st.session_state.engine_v34 = None
+if 'engine_v35' not in st.session_state:
+    st.session_state.engine_v35 = None
 if 'nodes' not in st.session_state:
     st.session_state.nodes = [[150, 50], [250, 150], [150, 250], [50, 150]]
 if 'history' not in st.session_state:
@@ -295,7 +295,8 @@ if 'redundancy_key' not in st.session_state: st.session_state.redundancy_key = 0
 
 # --- 7. SIDEBAR CONTROLS ---
 st.sidebar.markdown("### 🎛️ CONTROL PLANE")
-control_mode = st.sidebar.radio("Operation Mode", ["Manual Operator", "🤖 Autonomous Agent"], horizontal=True)
+# SWAPPED ORDER: Autonomous is now DEFAULT (Index 0)
+control_mode = st.sidebar.radio("Operation Mode", ["🤖 Autonomous Agent", "Manual Operator"], horizontal=True)
 is_agent = (control_mode == "🤖 Autonomous Agent")
 
 # 1. SCENARIO CUSTOMIZATION
@@ -305,7 +306,7 @@ node_count = st.sidebar.slider("Number of Data Centers", 3, 15, len(st.session_s
 reshuffle = st.sidebar.button("Randomize")
 
 if reshuffle or len(st.session_state.nodes) != node_count:
-    st.session_state.engine_v34 = None
+    st.session_state.engine_v35 = None
     st.session_state.history = []
     st.session_state.agent_log = [f"Network resized to {node_count} nodes. Memory wiped."]
     if 'agent_brain' in st.session_state: del st.session_state.agent_brain
@@ -319,12 +320,13 @@ if reshuffle or len(st.session_state.nodes) != node_count:
 # --- PRESET LOADER ---
 preset_options = [
     "Diamond (Regional)", "Pentagon Ring", "Grid (Urban)", "Hub-Spoke (Enterprise)", 
-    "Twin Cities (Dual Cluster)", "Global Link (Trans-Oceanic)", "Starlink (LEO Mesh)"
+    "Twin Cities (Dual Cluster)", "Global Link (Trans-Oceanic)", "Starlink (LEO Mesh)",
+    "Tri-State (3 Clusters)", "Pipeline (Linear)", "The Void (Perimeter)"
 ]
 preset = st.sidebar.selectbox("Load Preset", preset_options)
 
 if st.sidebar.button("⚠️ LOAD PRESET"):
-    st.session_state.engine_v34 = None
+    st.session_state.engine_v35 = None
     st.session_state.history = []
     if 'agent_brain' in st.session_state: del st.session_state.agent_brain
     
@@ -350,8 +352,37 @@ if st.sidebar.button("⚠️ LOAD PRESET"):
         st.session_state.nodes = left + right
     elif preset == "Starlink (LEO Mesh)":
         st.session_state.nodes = [[np.random.randint(20, 280), np.random.randint(20, 280)] for _ in range(12)]
+    elif preset == "Tri-State (3 Clusters)":
+        # 3 groups of 3
+        c1 = [[np.random.randint(40, 100), np.random.randint(40, 100)] for _ in range(3)]
+        c2 = [[np.random.randint(200, 260), np.random.randint(40, 100)] for _ in range(3)]
+        c3 = [[np.random.randint(120, 180), np.random.randint(200, 260)] for _ in range(3)]
+        st.session_state.nodes = c1 + c2 + c3
+    elif preset == "Pipeline (Linear)":
+        # Diagonal line
+        st.session_state.nodes = [[30 + i*20, 30 + i*20] for i in range(12)]
+    elif preset == "The Void (Perimeter)":
+        # Ring around the edges, empty middle
+        n = 10
+        w, h = 300, 300
+        nodes = []
+        for i in range(n):
+            # Top edge
+            nodes.append([random.randint(10, w-10), random.randint(10, 40)])
+            # Bottom edge
+            nodes.append([random.randint(10, w-10), random.randint(h-40, h-10)])
+            # Left Edge
+            nodes.append([random.randint(10, 40), random.randint(10, h-10)])
+            # Right Edge
+            nodes.append([random.randint(w-40, w-10), random.randint(10, h-10)])
+        # Pick 12 random ones from perimeter
+        st.session_state.nodes = random.sample(nodes, 12)
         
     st.rerun()
+
+# --- MOVED BUDGET INPUT HERE ---
+manual_budget = st.sidebar.number_input("Target Budget (k)", min_value=0, value=250, step=10)
+# -------------------------------
 
 st.sidebar.markdown("---")
 
@@ -389,7 +420,7 @@ traffic_load = st.sidebar.slider("Load (Agents)", 1000, 8000, 5000)
 if is_agent:
     st.sidebar.markdown("---")
     
-    # BUFFERED FORM (Prevents flashing)
+    # BUFFERED FORM
     with st.sidebar.form(key='cli_form', clear_on_submit=True):
         user_cmd = st.text_input("ENTER COMMAND >_", placeholder="Type 'HELP' for list")
         submit_btn = st.form_submit_button("EXECUTE")
@@ -414,10 +445,6 @@ if is_agent:
     </div>
     """, unsafe_allow_html=True)
 
-# 5. BUDGET (MOVED TO BOTTOM)
-manual_budget = st.sidebar.number_input("Target Budget (k)", min_value=0, value=250, step=10)
-
-
 # Sync sliders back to state
 if not is_agent:
     st.session_state.capex_key = capex_pref
@@ -426,10 +453,10 @@ if not is_agent:
 decay = 0.90 + (0.09 * (1.0 - capex_pref))
 
 # --- 7. INITIALIZE ---
-if st.session_state.engine_v34 is None or st.session_state.engine_v34.num_agents != traffic_load:
-    st.session_state.engine_v34 = BioEngine(300, 300, traffic_load)
+if st.session_state.engine_v35 is None or st.session_state.engine_v35.num_agents != traffic_load:
+    st.session_state.engine_v35 = BioEngine(300, 300, traffic_load)
 
-engine = st.session_state.engine_v34
+engine = st.session_state.engine_v35
 nodes_arr = np.array(st.session_state.nodes)
 
 # RUN LOOP
@@ -458,7 +485,7 @@ if is_agent:
 # --- 10. DASHBOARD UI ---
 c1, c2 = st.columns([3, 1])
 with c1:
-    st.markdown("### 🕸️ NET-OPT v34: CLEAN CONSOLE")
+    st.markdown("### 🕸️ NET-OPT v35: PRIME ARCHITECT")
     mode_label = "AUTONOMOUS" if is_agent else "MANUAL"
     st.caption(f"OPTIMIZATION TARGET: STEINER TREE APPROXIMATION | MODE: {mode_label}")
 
