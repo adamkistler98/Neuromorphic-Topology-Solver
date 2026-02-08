@@ -13,7 +13,7 @@ plt.style.use('dark_background')
 
 # --- 2. STEALTH CONFIGURATION ---
 st.set_page_config(
-    page_title="NetOpt v36: Sentient", 
+    page_title="NetOpt v58: Sentient", 
     layout="wide", 
     page_icon="🧠",
     initial_sidebar_state="expanded"
@@ -589,3 +589,4 @@ st.markdown(f"""
 # AUTO-LOOP
 time.sleep(0.01)
 st.rerun()
+
