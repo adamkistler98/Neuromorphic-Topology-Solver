@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial import distance_matrix
-from scipy.sparse.csgraph import minimum_spanning_tree
+from scipy.sparse.csgraph import minimum_spanning_tree, connected_components
 from scipy.ndimage import gaussian_filter
 import pandas as pd
 import time
@@ -13,7 +13,7 @@ plt.style.use('dark_background')
 
 # --- 2. STEALTH CONFIGURATION ---
 st.set_page_config(
-    page_title="NetOpt v21: Evolving", 
+    page_title="NetOpt v22: Stabilized", 
     layout="wide", 
     page_icon="🧠",
     initial_sidebar_state="expanded"
@@ -138,7 +138,7 @@ class BioEngine:
         # DECAY
         self.trail_map = gaussian_filter(self.trail_map, sigma=0.6) * decay
 
-# --- 5. THE EVOLVING AGENT BRAIN ---
+# --- 5. THE EVOLVING AGENT BRAIN (FIXED) ---
 class EvolvingAgent:
     def __init__(self):
         # Initial State [CAPEX, REDUNDANCY]
@@ -146,44 +146,55 @@ class EvolvingAgent:
         self.best_params = [0.8, 0.7]
         self.best_score = 0
         self.learning_rate = 0.05
-        self.history = []
+        self.cooldown = 0  # <--- NEW: Patience counter
         
     def propose_action(self):
-        # Hill Climbing: Jitter the parameters slightly
-        # 50% chance to modify CAPEX, 50% chance to modify Redundancy
+        # If in cooldown, just return current state
+        if self.cooldown > 0:
+            self.cooldown -= 1
+            return self.current_params, True # True = "Waiting"
+        
+        # Otherwise, make a move
         action_idx = random.choice([0, 1])
         change = random.choice([-self.learning_rate, self.learning_rate])
         
-        # Create candidate
         candidate = self.current_params.copy()
         candidate[action_idx] += change
         
-        # Clamp values
+        # Clamp
         candidate[0] = max(0.1, min(0.99, candidate[0])) # Capex
         candidate[1] = max(0.1, min(1.5, candidate[1]))  # Redundancy
         
-        return candidate
+        # Reset cooldown (Wait 3 frames before judging this new move)
+        self.cooldown = 3 
+        
+        return candidate, False # False = "New Move Made"
 
     def learn(self, efficiency_score, candidate_params):
-        # Did we improve?
+        # Only learn if cooldown is finished (Stability reached)
+        if self.cooldown > 0:
+            return f"Stabilizing... ({self.cooldown})"
+        
         msg = ""
-        if efficiency_score > self.best_score:
-            improvement = efficiency_score - self.best_score
-            self.best_score = efficiency_score
-            self.best_params = candidate_params
-            self.current_params = candidate_params # Accept new state
-            msg = f"SUCCESS: Efficiency +{int(improvement)}%. Locking new vector."
+        # Acceptance logic
+        if efficiency_score >= self.best_score - 2: # Allow small drops (Annealing)
+            if efficiency_score > self.best_score:
+                msg = f"SUCCESS: Efficiency +{int(efficiency_score - self.best_score)}%. New Baseline."
+                self.best_score = efficiency_score
+                self.best_params = candidate_params
+                self.current_params = candidate_params
+            else:
+                msg = "HOLD: Performance stable. Exploring..."
+                self.current_params = candidate_params
         else:
-            # Revert to best known state (Don't accept bad move)
-            self.current_params = self.best_params
-            msg = f"FAIL: Efficiency dropped to {int(efficiency_score)}%. Reverting."
+            msg = f"FAIL: Drop detected ({int(efficiency_score)}%). Reverting."
+            self.current_params = self.best_params # Revert
             
-        self.history.append((candidate_params, efficiency_score))
         return msg
 
 # --- 6. STATE MANAGEMENT ---
-if 'engine_v21' not in st.session_state:
-    st.session_state.engine_v21 = None
+if 'engine_v22' not in st.session_state:
+    st.session_state.engine_v22 = None
 if 'nodes' not in st.session_state:
     st.session_state.nodes = [[150, 50], [250, 150], [150, 250], [50, 150]]
 if 'history' not in st.session_state:
@@ -203,12 +214,11 @@ node_count = st.sidebar.slider("Number of Data Centers", 3, 15, len(st.session_s
 reshuffle = st.sidebar.button("🎲 Reshuffle Locations")
 
 if reshuffle or len(st.session_state.nodes) != node_count:
-    st.session_state.engine_v21 = None
+    st.session_state.engine_v22 = None
     st.session_state.history = []
     st.session_state.agent_log = [f"Network resized to {node_count} nodes. Memory wiped."]
-    st.session_state.agent_brain = EvolvingAgent() # Reset brain on new map
+    st.session_state.agent_brain = EvolvingAgent() # Reset brain
     
-    # GENERATE RANDOM NODES
     new_nodes = []
     for _ in range(node_count):
         new_nodes.append([np.random.randint(50, 250), np.random.randint(50, 250)])
@@ -217,7 +227,7 @@ if reshuffle or len(st.session_state.nodes) != node_count:
 
 preset = st.sidebar.selectbox("Load Preset", ["Diamond (Regional)", "Pentagon Ring", "Grid (Urban)", "Hub-Spoke (Enterprise)"])
 if st.sidebar.button("⚠️ LOAD PRESET"):
-    st.session_state.engine_v21 = None
+    st.session_state.engine_v22 = None
     st.session_state.history = []
     st.session_state.agent_brain = EvolvingAgent()
     if preset == "Diamond (Regional)":
@@ -251,7 +261,7 @@ else: # AGENT MODE
     traffic_load = 5000 
     
     # 1. AGENT PROPOSES PARAMETERS
-    proposed_params = st.session_state.agent_brain.propose_action()
+    proposed_params, is_waiting = st.session_state.agent_brain.propose_action()
     capex_pref = proposed_params[0]
     redundancy_pref = proposed_params[1]
     
@@ -263,10 +273,10 @@ else: # AGENT MODE
 decay = 0.90 + (0.09 * (1.0 - capex_pref))
 
 # --- 7. INITIALIZE ---
-if st.session_state.engine_v21 is None or st.session_state.engine_v21.num_agents != traffic_load:
-    st.session_state.engine_v21 = BioEngine(300, 300, traffic_load)
+if st.session_state.engine_v22 is None or st.session_state.engine_v22.num_agents != traffic_load:
+    st.session_state.engine_v22 = BioEngine(300, 300, traffic_load)
 
-engine = st.session_state.engine_v21
+engine = st.session_state.engine_v22
 nodes_arr = np.array(st.session_state.nodes)
 
 # RUN LOOP
@@ -285,18 +295,20 @@ capex_efficiency = min(100, (mst_cost / (cable_volume + 1)) * 100)
 
 # --- 9. AGENT LEARNING (FEEDBACK LOOP) ---
 if control_mode == "🤖 Autonomous Agent":
-    # 2. AGENT LEARNS FROM RESULT
+    # 2. AGENT LEARNS FROM RESULT (BUT ONLY IF STABLE)
     log_msg = st.session_state.agent_brain.learn(capex_efficiency, [capex_pref, redundancy_pref])
     
-    # Update log only if message changed (avoid spam)
-    if not st.session_state.agent_log or st.session_state.agent_log[-1] != f"Agent: {log_msg}":
+    # Update log only if message is meaningful
+    if "Stabilizing" in log_msg:
+        pass # Don't spam the log with dots
+    elif not st.session_state.agent_log or st.session_state.agent_log[-1] != f"Agent: {log_msg}":
         st.session_state.agent_log.append(f"Agent: {log_msg}")
         if len(st.session_state.agent_log) > 6: st.session_state.agent_log.pop(0)
 
 # --- 10. DASHBOARD UI ---
 c1, c2 = st.columns([3, 1])
 with c1:
-    st.markdown("### 🕸️ NET-OPT v21: SELF-EVOLVING ARCHITECT")
+    st.markdown("### 🕸️ NET-OPT v22: SELF-EVOLVING ARCHITECT")
     mode_label = "AUTONOMOUS" if control_mode == "🤖 Autonomous Agent" else "MANUAL"
     st.caption(f"OPTIMIZATION TARGET: STEINER TREE APPROXIMATION | MODE: {mode_label}")
 
@@ -373,7 +385,7 @@ with col_stats:
             log_html += f"> {line}<br>"
         log_html += "<span style='animation: blink 1s infinite;'>_</span></div>"
         st.markdown(log_html, unsafe_allow_html=True)
-        st.caption("Real-time decision log. Agent uses Hill-Climbing AI to self-optimize.")
+        st.caption("Real-time decision log. Agent waits for simulation stability before learning.")
     else:
         st.markdown("**3. COST CONVERGENCE**")
         st.session_state.history.append({"MST Baseline": float(mst_cost), "Bio-Solver": float(cable_volume)})
