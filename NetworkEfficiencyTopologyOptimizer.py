@@ -13,7 +13,7 @@ plt.style.use('dark_background')
 
 # --- 2. STEALTH CONFIGURATION ---
 st.set_page_config(
-    page_title="NetOpt v25: Live Wire", 
+    page_title="NetOpt v26: Momentum", 
     layout="wide", 
     page_icon="⚡",
     initial_sidebar_state="expanded"
@@ -130,28 +130,38 @@ class BioEngine:
         # DECAY
         self.trail_map = gaussian_filter(self.trail_map, sigma=0.6) * decay
 
-# --- 5. THE ADAPTIVE AGENT BRAIN ---
-class AdaptiveAgent:
+# --- 5. THE MOMENTUM AGENT BRAIN ---
+class MomentumAgent:
     def __init__(self, start_capex, start_redundancy):
-        # INHERIT THE MANUAL STATE
         self.current_params = [start_capex, start_redundancy] 
         self.best_params = [start_capex, start_redundancy]
         self.best_score = 0
-        self.learning_rate = 0.04 # Smaller steps for smoother animation
+        self.learning_rate = 0.03
         self.cooldown = 0
-        self.fail_streak = 0 
+        self.fail_streak = 0
+        
+        # MOMENTUM MEMORY: [Index of Param, Direction (+1/-1)]
+        # This keeps the sliders moving in the same direction if it's working
+        self.last_move = None 
         
     def propose_action(self):
         if self.cooldown > 0:
             self.cooldown -= 1
             return self.current_params, True 
         
-        # Make a move (Greedy optimization)
-        action_idx = random.choice([0, 1])
-        change = random.choice([-self.learning_rate, self.learning_rate])
-        
         candidate = self.current_params.copy()
-        candidate[action_idx] += change
+        
+        # LOGIC: If we have momentum (last move worked), keep doing it.
+        # Otherwise, pick a random new move.
+        if self.last_move:
+            idx, direction = self.last_move
+            candidate[idx] += (self.learning_rate * direction)
+        else:
+            # Pick random move
+            idx = random.choice([0, 1])
+            direction = random.choice([-1, 1])
+            candidate[idx] += (self.learning_rate * direction)
+            self.last_move = (idx, direction) # Tentatively set momentum
         
         # Clamp Logic
         candidate[0] = max(0.01, min(0.99, candidate[0])) 
@@ -165,37 +175,40 @@ class AdaptiveAgent:
             return f"Simulating impact... ({self.cooldown})"
         
         msg = ""
-        # 1. CHECK FOR SPIRAL OF DEATH
+        
+        # 1. CHECK FOR LOCAL MAXIMA (STUCK)
         if self.fail_streak >= 5:
-            self.best_score = efficiency_score # Reset baseline
+            self.best_score = efficiency_score
             self.best_params = candidate_params
             self.current_params = candidate_params
             self.fail_streak = 0
-            return f"WARN: Local Maxima. Re-calibrating baseline."
+            self.last_move = None # KILL MOMENTUM
+            return f"WARN: Local Maxima. Breaking momentum."
 
-        # 2. STANDARD EVALUATION
-        # Allow small fluctuations (noise tolerance)
-        if efficiency_score >= self.best_score - 2: 
+        # 2. EVALUATION
+        if efficiency_score >= self.best_score - 1: # Strict tolerance
             if efficiency_score > self.best_score:
                 improvement = efficiency_score - self.best_score
-                msg = f"SUCCESS: Efficiency +{int(improvement)}%. Locking vector."
+                msg = f"SUCCESS: Efficiency +{int(improvement)}%. Continuing Vector."
                 self.best_score = efficiency_score
                 self.best_params = candidate_params
                 self.current_params = candidate_params
                 self.fail_streak = 0 
+                # Keep self.last_move (MOMENTUM PRESERVED)
             else:
-                msg = "HOLD: Stable. Exploring adjacent vectors..."
+                msg = "HOLD: Stable. Maintaining course..."
                 self.current_params = candidate_params
         else:
-            msg = f"FAIL: Efficiency loss ({int(efficiency_score)}%). Reverting."
+            msg = f"FAIL: Signal loss ({int(efficiency_score)}%). Reversing."
             self.current_params = self.best_params # Revert
             self.fail_streak += 1 
+            self.last_move = None # KILL MOMENTUM (Try something else next time)
             
         return msg
 
 # --- 6. STATE MANAGEMENT ---
-if 'engine_v25' not in st.session_state:
-    st.session_state.engine_v25 = None
+if 'engine_v26' not in st.session_state:
+    st.session_state.engine_v26 = None
 if 'nodes' not in st.session_state:
     st.session_state.nodes = [[150, 50], [250, 150], [150, 250], [50, 150]]
 if 'history' not in st.session_state:
@@ -215,14 +228,13 @@ is_agent = (control_mode == "🤖 Autonomous Agent")
 # 1. SCENARIO CUSTOMIZATION
 st.sidebar.markdown("#### 1. NETWORK SCALE")
 node_count = st.sidebar.slider("Number of Data Centers", 3, 15, len(st.session_state.nodes))
-reshuffle = st.sidebar.button("🎲 Reshuffle Locations")
+reshuffle = st.sidebar.button("Randomize") # CLEAN BUTTON NAME
 
 # Handle Reset
 if reshuffle or len(st.session_state.nodes) != node_count:
-    st.session_state.engine_v25 = None
+    st.session_state.engine_v26 = None
     st.session_state.history = []
     st.session_state.agent_log = [f"Network resized to {node_count} nodes. Memory wiped."]
-    # Don't reset keys here, let agent inherit current keys
     if 'agent_brain' in st.session_state: del st.session_state.agent_brain
     
     new_nodes = []
@@ -233,7 +245,7 @@ if reshuffle or len(st.session_state.nodes) != node_count:
 
 preset = st.sidebar.selectbox("Load Preset", ["Diamond (Regional)", "Pentagon Ring", "Grid (Urban)", "Hub-Spoke (Enterprise)"])
 if st.sidebar.button("⚠️ LOAD PRESET"):
-    st.session_state.engine_v25 = None
+    st.session_state.engine_v26 = None
     st.session_state.history = []
     if 'agent_brain' in st.session_state: del st.session_state.agent_brain
     if preset == "Diamond (Regional)":
@@ -254,9 +266,8 @@ st.sidebar.markdown("---")
 
 # 2. AGENT LOGIC (Calculated BEFORE Sliders)
 if is_agent:
-    # Initialize Brain if not present (Inheriting current keys)
     if 'agent_brain' not in st.session_state:
-        st.session_state.agent_brain = AdaptiveAgent(st.session_state.capex_key, st.session_state.redundancy_key)
+        st.session_state.agent_brain = MomentumAgent(st.session_state.capex_key, st.session_state.redundancy_key)
         st.session_state.agent_log.append("Agent: Taking control from Manual Operator...")
     
     st.sidebar.markdown("#### 2. AGENT SERVO CONTROL")
@@ -269,11 +280,9 @@ if is_agent:
     st.session_state.capex_key = proposed_params[0]
     st.session_state.redundancy_key = proposed_params[1]
     
-    # Fixed Physics for Agent
     latency_pref = 3.0
     terrain_diff = 0.1
 else:
-    # In manual mode, kill the brain so it resets next time we toggle
     if 'agent_brain' in st.session_state: del st.session_state.agent_brain
     
     st.sidebar.markdown("#### 2. MANUAL OVERRIDE")
@@ -281,24 +290,21 @@ else:
     terrain_diff = st.sidebar.slider("Noise", 0.05, 0.5, 0.1)
 
 # 3. RENDER SLIDERS (Using Session State Keys)
-# This allows Manual Mode to write to keys, AND Agent Mode to write to keys.
 capex_pref = st.sidebar.slider("CAPEX Limit (Decay)", 0.0, 1.0, key="capex_key")
 redundancy_pref = st.sidebar.slider("Failover Risk (Angle)", 0.1, 1.5, key="redundancy_key")
 traffic_load = st.sidebar.slider("Load (Agents)", 1000, 10000, 5000)
 
-# Derived logic
 decay = 0.90 + (0.09 * (1.0 - capex_pref))
 
 # --- 7. INITIALIZE ---
-if st.session_state.engine_v25 is None or st.session_state.engine_v25.num_agents != traffic_load:
-    st.session_state.engine_v25 = BioEngine(300, 300, traffic_load)
+if st.session_state.engine_v26 is None or st.session_state.engine_v26.num_agents != traffic_load:
+    st.session_state.engine_v26 = BioEngine(300, 300, traffic_load)
 
-engine = st.session_state.engine_v25
+engine = st.session_state.engine_v26
 nodes_arr = np.array(st.session_state.nodes)
 
 # RUN LOOP
 for _ in range(12): 
-    # Pass all 4 variable sets
     engine.step(st.session_state.nodes, latency_pref, decay, redundancy_pref, terrain_diff)
 
 # --- 8. METRICS & ANALYSIS ---
@@ -312,10 +318,8 @@ capex_efficiency = min(100, (mst_cost / (cable_volume + 1)) * 100)
 
 # --- 9. AGENT LEARNING (FEEDBACK LOOP) ---
 if is_agent:
-    # 3. AGENT LEARNS FROM RESULT
     log_msg = st.session_state.agent_brain.learn(capex_efficiency, [capex_pref, redundancy_pref])
     
-    # Update log
     if "Simulating" in log_msg:
         pass 
     elif not st.session_state.agent_log or st.session_state.agent_log[-1] != f"Agent: {log_msg}":
@@ -325,7 +329,7 @@ if is_agent:
 # --- 10. DASHBOARD UI ---
 c1, c2 = st.columns([3, 1])
 with c1:
-    st.markdown("### 🕸️ NET-OPT v25: LIVE WIRE")
+    st.markdown("### 🕸️ NET-OPT v26: MOMENTUM")
     mode_label = "AUTONOMOUS" if is_agent else "MANUAL"
     st.caption(f"OPTIMIZATION TARGET: STEINER TREE APPROXIMATION | MODE: {mode_label}")
 
@@ -345,7 +349,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# METRICS
 m1, m2, m3, m4, m5 = st.columns(5)
 m1.metric("DATA CENTERS", f"{len(nodes_arr)}")
 m2.metric("MINIMUM VIABLE", f"{int(mst_cost)} km")
@@ -356,7 +359,6 @@ m5.metric("EFFICIENCY", f"{int(capex_efficiency)}%")
 # --- 11. VISUALIZATION TRIFECTA ---
 col_vis1, col_vis2, col_stats = st.columns([1, 1, 1.2])
 
-# 1. BIOLOGICAL SOLVER
 with col_vis1:
     st.markdown("**1. LATENCY TERRAIN (Solver)**")
     fig1, ax1 = plt.subplots(figsize=(3.5, 3.5)) 
@@ -369,7 +371,6 @@ with col_vis1:
     st.pyplot(fig1, use_container_width=True)
     st.caption("Heatmap shows packet congestion. High Latency Priority forces straighter, hotter paths.")
 
-# 2. SCHEMATIC
 with col_vis2:
     st.markdown("**2. NETWORK BLUEPRINT (Output)**")
     fig2, ax2 = plt.subplots(figsize=(3.5, 3.5))
@@ -399,7 +400,6 @@ with col_stats:
     st.session_state.history.append({"MST Baseline": float(mst_cost), "Bio-Solver": float(cable_volume)})
     if len(st.session_state.history) > 80: st.session_state.history.pop(0)
     
-    # MATPLOTLIB CHART
     chart_data = pd.DataFrame(st.session_state.history)
     fig3, ax3 = plt.subplots(figsize=(4, 2.5))
     
